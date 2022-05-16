@@ -1,4 +1,4 @@
-use crate::io::{clear_screen, display_board, display_winner, parse_stdin, Input};
+use crate::io::{clear_screen, display_board, display_draw, display_winner, parse_stdin, Input};
 use crate::utils::blank_board;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -11,14 +11,14 @@ pub enum Piece {
 pub type Board = [[Piece; 3]; 3];
 
 impl Piece {
-    pub fn display(&self) -> String {
+    pub fn string(&self) -> String {
         match self {
             Piece::Blank => ".".to_string(),
             Piece::O => "o".to_string(),
             Piece::X => "x".to_string(),
         }
     }
-    pub fn opposite(&self) -> Self {
+    fn opposite(&self) -> Self {
         match self {
             Piece::Blank => Self::Blank,
             Piece::O => Self::X,
@@ -64,7 +64,7 @@ fn diagonals_winner(board: &Board) -> Option<Piece> {
     winner
 }
 
-pub fn game_winner(board: &Board) -> Option<Piece> {
+fn game_winner(board: &Board) -> Option<Piece> {
     let rows_winner_option = rows_winner(board);
     if rows_winner_option.is_some() {
         return rows_winner_option;
@@ -83,12 +83,18 @@ pub fn game_winner(board: &Board) -> Option<Piece> {
     None
 }
 
+fn game_draw(board: &Board) -> bool {
+    board
+        .iter()
+        .all(|row| row.iter().all(|col| *col != Piece::Blank))
+}
+
 fn place_if_blank(board: &mut Board, input: Input, taker: Piece) -> Result<(), String> {
     let row = input.row;
     let column = input.column;
 
     if board[row][column] != Piece::Blank {
-        return Err("Column {column}, row {row} is already taken.".to_string());
+        return Err(format!("Column {column}, row {row} is already taken."));
     }
 
     board[row][column] = taker;
@@ -106,7 +112,7 @@ pub fn game_loop() {
         let input_res = parse_stdin();
         if let Err(err) = input_res.as_ref() {
             clear_screen();
-            println!("{:?}", err);
+            println!("{}", err);
             continue;
         }
         let input = input_res.unwrap();
@@ -120,6 +126,9 @@ pub fn game_loop() {
         let winner_option = game_winner(&board);
         if let Some(winner) = winner_option {
             display_winner(&board, winner);
+            break;
+        } else if game_draw(&board) {
+            display_draw(&board);
             break;
         }
 
